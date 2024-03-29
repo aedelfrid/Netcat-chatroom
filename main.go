@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"net"
+	"time"
 )
 
 type Client struct {
@@ -13,18 +13,16 @@ type Client struct {
 
 type ClientList []Client
 
-func (clients ClientList) newClient(conn net.Conn) Client {
+func (clients ClientList) newClient(conn net.Conn) (Client) {
 	
 	client := Client{
 		ip: conn.RemoteAddr(),
 	}
 
-	clients = append(clients, client)
-
 	return client
 }
 
-func pingClients(clients ClientList) ClientList{
+func (clients ClientList) pingClients() ClientList{
 	for i, client := range clients {
 		conn, err := net.Dial(client.ip.Network(), client.ip.String())
 		if err != nil {
@@ -45,7 +43,7 @@ func pingClients(clients ClientList) ClientList{
 	return clients
 }
 
-func handlePacket(conn net.Conn) {
+func handlePayload(conn net.Conn, sender Client) {
 	buf := make([]byte, 1024)
 	conn.Read(buf)
 	conn.Write([]byte("Message received.\n"))
@@ -60,7 +58,12 @@ func main() {
 		port    string = ":8000"
 	)
 
+	tick := time.NewTicker(60 * time.Second)
 	clients := make(ClientList, 42)
+
+	for range tick.C {
+		clients = clients.pingClients()
+	}
 
 	listener, err := net.Listen(network, port)
 	if err != nil {
@@ -76,8 +79,9 @@ func main() {
 			panic(err)
 		}
 		
-		user := clients.newClient(conn)
+		sender := clients.newClient(conn)
+		clients = append(clients, sender)
 
-		go handlePacket(conn)
+		go handlePayload(conn, sender)
 	}
 }

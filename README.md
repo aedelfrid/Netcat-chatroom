@@ -101,6 +101,15 @@ handle payload {
     recieve message
 }
 
+ping clients
+    dial addr
+        write "Ping"
+        read
+            if response != "Pong"
+                remove from clientList
+
+handlePayload
+
 ### client
 
 #### send message to server at port
