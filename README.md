@@ -88,6 +88,18 @@ pass message to other connected clients
     all sending back pong
     goroutine
 
+#### more notes
+
+total payload recieved over port -> handle payload
+
+payload = binary {
+    userid
+    message
+}
+
+handle payload {
+    recieve message
+}
 
 ### client
 
