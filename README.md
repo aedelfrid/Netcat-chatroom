@@ -90,25 +90,18 @@ pass message to other connected clients
 
 #### more notes
 
-total payload recieved over port -> handle payload
+listen for messages
 
-payload = binary {
-    userid
-    message
-}
+add sender to client list
 
-handle payload {
-    recieve message
-}
+send message to client list
+    except sender
 
 ping clients
-    dial addr
-        write "Ping"
-        read
-            if response != "Pong"
-                remove from clientList
+    remove those who dont respond from client list
 
-handlePayload
+bonuses
+    store clients and messages in a db
 
 ### client
 

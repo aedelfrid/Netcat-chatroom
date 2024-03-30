@@ -1,87 +1,113 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"time"
 )
 
-type Client struct {
-	id int
-	ip net.Addr
+type Connection struct {
+	net.Conn
 }
 
-type ClientList []Client
-
-func (clients ClientList) newClient(conn net.Conn) (Client) {
-	
-	client := Client{
-		ip: conn.RemoteAddr(),
-	}
-
-	return client
+type Message struct {
+	userid int8
+	body string
 }
 
-func (clients ClientList) pingClients() ClientList{
-	for i, client := range clients {
-		conn, err := net.Dial(client.ip.Network(), client.ip.String())
-		if err != nil {
-			fmt.Println(err)
+var (
+	netType string = "tcp"
+	addr string = ":8000"
+	clients chan clientList
+	connectedClients chan clientList
+	lastMessage chan Message
+)
+
+func (m Message)sendMessage(sender client) {
+	for _, client := range <-connectedClients {
+		if client.id != m.userid{
+			return
 		}
-		buf := make([]byte, 64)
+
+		d, _ := net.Dial(client.ip.Network(), client.ip.Network())
+		d.Write([]byte(m.body))
 		
+	}
+}
 
-		conn.Write([]byte("Ping"))
-		conn.Read(buf)
-		conn.Close()
+func pingClients() {
+	mc := <-clients
+	buf := make([]byte, 64)
 
-		if string(buf) != "Pong" {
-			clients = append(clients[:i], clients[i+1] )
+	for i, c := range mc {
+		d, err := net.Dial(c.ip.Network(), c.ip.String())
+		if err != nil {
+			log.Print(err)
+		}
+
+		d.Write([]byte("ping"))
+		d.Read(buf)
+		d.Close()
+
+		if string(buf) != "pong" {
+			mc = append(mc[:i], mc[i+1:]...)
 		}
 	}
 
-	return clients
+	connectedClients <- mc
 }
 
-func handlePayload(conn net.Conn, sender Client) {
-	buf := make([]byte, 1024)
-	conn.Read(buf)
-	conn.Write([]byte("Message received.\n"))
-	conn.Close()
+func handleReq(conn net.Conn) {
+	cl := <-clients
 
-	fmt.Println(string(buf))
+	sender := newClient(conn)
+
+	cl = append(cl, sender)
+	clients <- cl
+
+	reader := bufio.NewReader(conn)
+	for {
+		m, err := reader.ReadString('\n')
+		if err != nil {
+			conn.Close()
+			return
+		}
+
+		message := Message{
+			userid: sender.id,
+			body: m,
+		}
+
+		lastMessage <- message
+	}
+}
+
+func server() {
+	l, err := net.Listen(netType, addr)
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+
+
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Print(err)
+		}
+
+		go handleReq(conn)
+	}
 }
 
 func main() {
-	const (
-		network string = "tcp"
-		port    string = ":8000"
-	)
-
 	tick := time.NewTicker(60 * time.Second)
-	clients := make(ClientList, 42)
 
 	for range tick.C {
-		clients = clients.pingClients()
+		go pingClients()
 	}
 
-	listener, err := net.Listen(network, port)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer listener.Close()
-
-	fmt.Printf("Listening on port %s", port)
-
-	for {
-		conn, _ := listener.Accept()
-		if err != nil {
-			panic(err)
-		}
-		
-		sender := clients.newClient(conn)
-		clients = append(clients, sender)
-
-		go handlePayload(conn, sender)
-	}
+	
 }
