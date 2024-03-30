@@ -74,6 +74,35 @@ i will consider this project done when it meets the following expectations;
 
         conn.close()
 
+#### tying things together
+
+listen for messages over port
+    messages from client or netcat are simple strings
+get ip of sender
+    store in a FIFO arr [100]
+        every minute ping each client
+        if client sends back pong, add to slice
+    lastSent := senderIP
+pass message to other connected clients
+    ping/pong
+    all sending back pong
+    goroutine
+
+#### more notes
+
+listen for messages
+
+add sender to client list
+
+send message to client list
+    except sender
+
+ping clients
+    remove those who dont respond from client list
+
+bonuses
+    store clients and messages in a db
+
 ### client
 
 #### send message to server at port
