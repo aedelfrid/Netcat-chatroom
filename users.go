@@ -5,15 +5,15 @@ import (
 	"net"
 )
 
-type client struct {
+type User struct {
 	id int8
 	ip net.Addr
 }
 
-type clientList []client
+type userList []User
 
-func newClient(conn net.Conn) client {
-	user := client{
+func newUser(conn net.Conn) User {
+	user := User{
 		id: int8(rand.Int()),
 		ip: conn.RemoteAddr(),
 	}
