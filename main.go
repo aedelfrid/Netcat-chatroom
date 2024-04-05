@@ -5,109 +5,107 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 )
 
-type Connection struct {
-	net.Conn
+type Server struct {
+	host string
+	port string
+	db *DB
+	clients clientList
 }
 
-type Message struct {
-	userid int8
-	body string
+type Client struct {
+	conn net.Conn
 }
 
-var (
-	netType string = "tcp"
-	addr string = ":8000"
-	clients chan clientList
-	connectedClients chan clientList
-	lastMessage chan Message
-)
+type clientList map[string]Client
 
-func (m Message)sendMessage(sender client) {
-	for _, client := range <-connectedClients {
-		if client.id != m.userid{
-			return
-		}
+func (*clientList) newClient(conn net.Conn) *Client {
+	client := &Client{
+		conn: conn,
+	}
 
-		d, _ := net.Dial(client.ip.Network(), client.ip.Network())
-		d.Write([]byte(m.body))
-		
+	return client
+}
+
+func (*clientList) closeClient() {
+
+} 
+
+type Config struct {
+	Host string
+	Port string
+	db *DB
+}
+
+func New(config *Config) *Server {
+	return &Server{
+		host: config.Host,
+		port: config.Port,
 	}
 }
 
-func pingClients() {
-	mc := <-clients
-	buf := make([]byte, 64)
-
-	for i, c := range mc {
-		d, err := net.Dial(c.ip.Network(), c.ip.String())
-		if err != nil {
-			log.Print(err)
-		}
-
-		d.Write([]byte("ping"))
-		d.Read(buf)
-		d.Close()
-
-		if string(buf) != "pong" {
-			mc = append(mc[:i], mc[i+1:]...)
-		}
-	}
-
-	connectedClients <- mc
-}
-
-func handleReq(conn net.Conn) {
-	cl := <-clients
-
-	sender := newClient(conn)
-
-	cl = append(cl, sender)
-	clients <- cl
-
-	reader := bufio.NewReader(conn)
-	for {
-		m, err := reader.ReadString('\n')
-		if err != nil {
-			conn.Close()
-			return
-		}
-
-		message := Message{
-			userid: sender.id,
-			body: m,
-		}
-
-		lastMessage <- message
-	}
-}
-
-func server() {
-	l, err := net.Listen(netType, addr)
+func (server *Server) Run() {
+	userChan := make(chan User, 10)
+	messageChan := make(chan Message, 50)
+	
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", server.host, server.port))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	defer l.Close()
-
+	defer listener.Close()
 
 	for {
-		conn, err := l.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			log.Print(err)
+			log.Fatal(err)
 		}
 
-		go handleReq(conn)
+		client := &Client{
+			conn: conn,
+		}
+
+		append(server.clients, *client)
+
+		go client.handleRequest()
+	}
+}
+
+func (client *Client) handleRequest() {
+	reader := bufio.NewReader(client.conn)
+
+	// collect userinfo
+	// create new Message instance
+	// find user in db
+	// if user not in db, add new user
+
+	// store message in db
+	// dial 
+
+	for {
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+			client.conn.Close()
+
+			return
+		}
+		fmt.Printf("Message incoming: %s", string(message))
+		client.conn.Write([]byte("Message received.\n"))
 	}
 }
 
 func main() {
-	tick := time.NewTicker(60 * time.Second)
+	d := initDB()
+	defer d.Close()
 
-	for range tick.C {
-		go pingClients()
-	}
+	server := New(&Config{
+		Host: "localhost",
+		Port: "3333",
+		db: d,
+	})
 
-	
+	server.Run()
 }
+
+

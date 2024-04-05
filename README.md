@@ -93,12 +93,20 @@ pass message to other connected clients
 listen for messages
 
 add sender to client list
+    client list is map
 
 send message to client list
     except sender
+    iterate oer clientlist
+    no goroutine necessary
 
-ping clients
-    remove those who dont respond from client list
+clientList
+    add to list on new connection
+    someway to track conn & username
+        val, ok := list[username]
+        if ok && val == conn {
+
+        }
 
 bonuses
     store clients and messages in a db
