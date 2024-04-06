@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"time"
-	"time"
 )
 
 type Server struct {
@@ -26,7 +25,7 @@ type Message struct {
 }
 
 type Client struct {
-	conn net.Conn
+	conn   net.Conn
 	server *Server
 }
 
@@ -76,7 +75,7 @@ func (server *Server) Run() {
 		}
 
 		client := &Client{
-			conn: conn,
+			conn:   conn,
 			server: server,
 		}
 
@@ -113,12 +112,11 @@ func (client *Client) handleRequest(s *Server) {
 }
 
 func main() {
-	tick := time.NewTicker(60 * time.Second)
 
 	server := New(&Config{
 		Host: "localhost",
 		Port: "3333",
-		db:   d,
+		db:   initDB(),
 	})
 
 	server.Run()
