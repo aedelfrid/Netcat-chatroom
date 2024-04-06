@@ -2,20 +2,31 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
 type Server struct {
-	host string
-	port string
-	db *DB
-	clients clientList
+	host        string
+	port        string
+	db          *DB
+	clients     clientList
+	clientChan  chan Client
+	messageChan chan Message
+}
+
+type Message struct {
+	Username  string
+	TimeStamp time.Time
+	Body      string
 }
 
 type Client struct {
 	conn net.Conn
+	server *Server
 }
 
 type clientList map[string]Client
@@ -30,12 +41,12 @@ func (*clientList) newClient(conn net.Conn) *Client {
 
 func (*clientList) closeClient() {
 
-} 
+}
 
 type Config struct {
 	Host string
 	Port string
-	db *DB
+	db   *DB
 }
 
 func New(config *Config) *Server {
@@ -46,9 +57,10 @@ func New(config *Config) *Server {
 }
 
 func (server *Server) Run() {
-	userChan := make(chan User, 10)
-	messageChan := make(chan Message, 50)
-	
+	server.clientChan = make(chan Client, 10)
+	server.messageChan = make(chan Message, 50)
+	server.clients = make(clientList)
+
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", server.host, server.port))
 	if err != nil {
 		log.Fatal(err)
@@ -63,15 +75,14 @@ func (server *Server) Run() {
 
 		client := &Client{
 			conn: conn,
+			server: server,
 		}
 
-		append(server.clients, *client)
-
-		go client.handleRequest()
+		go client.handleRequest(server)
 	}
 }
 
-func (client *Client) handleRequest() {
+func (client *Client) handleRequest(s *Server) {
 	reader := bufio.NewReader(client.conn)
 
 	// collect userinfo
@@ -80,18 +91,25 @@ func (client *Client) handleRequest() {
 	// if user not in db, add new user
 
 	// store message in db
-	// dial 
+	// dial
 
 	for {
-		message, err := reader.ReadString('\n')
+		jsonData, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Println(err)
 			client.conn.Close()
 
 			return
 		}
-		fmt.Printf("Message incoming: %s", string(message))
+		fmt.Printf("Message incoming: %s", jsonData)
 		client.conn.Write([]byte("Message received.\n"))
+
+		message := &Message{}
+
+		_ = json.Unmarshal([]byte(jsonData), &message)
+
+		// append(server.clients, *client)
+		s.clients[message.Username] = *client
 	}
 }
 
@@ -102,10 +120,8 @@ func main() {
 	server := New(&Config{
 		Host: "localhost",
 		Port: "3333",
-		db: d,
+		db:   d,
 	})
 
 	server.Run()
 }
-
-

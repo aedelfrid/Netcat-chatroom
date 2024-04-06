@@ -102,8 +102,8 @@ send message to client list
 
 clientList
     add to list on new connection
-    someway to track conn & username
-        val, ok := list[username]
+    someway to track conn & Username
+        val, ok := list[Username]
         if ok && val == conn {
 
         }
@@ -111,7 +111,22 @@ clientList
 bonuses
     store clients and messages in a db
 
+
+
 ### client
+
+needs to send 
+
+type Message struct {
+	Username  string
+	TimeStamp time.Time
+	Body      string
+}
+
+in json format
+
+
+
 
 #### send message to server at port
 
