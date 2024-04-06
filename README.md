@@ -93,7 +93,6 @@ pass message to other connected clients
 listen for messages
 
 add sender to client list
-    client list is map
 
 send message to client list
     except sender

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"time"
+	"time"
 )
 
 type Server struct {
@@ -70,7 +71,8 @@ func (server *Server) Run() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatal(err)
+			conn.Close()
+			return
 		}
 
 		client := &Client{
@@ -96,10 +98,7 @@ func (client *Client) handleRequest(s *Server) {
 	for {
 		jsonData, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
-			client.conn.Close()
-
-			return
+			log.Print(err)
 		}
 		fmt.Printf("Message incoming: %s", jsonData)
 		client.conn.Write([]byte("Message received.\n"))
@@ -114,8 +113,7 @@ func (client *Client) handleRequest(s *Server) {
 }
 
 func main() {
-	d := initDB()
-	defer d.Close()
+	tick := time.NewTicker(60 * time.Second)
 
 	server := New(&Config{
 		Host: "localhost",
