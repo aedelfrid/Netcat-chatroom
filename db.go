@@ -4,21 +4,13 @@ import (
 	"log"
 
 	badger "github.com/dgraph-io/badger/v4"
-	"time"
 )
-
-type Message struct {
-	username string
-	timeStamp time.Time
-	body string
-}
 
 type DB struct {
 	*badger.DB
-	
 }
 
-func initDB() *DB{
+func initDB() *DB {
 	d, err := badger.Open(badger.DefaultOptions("/data"))
 	if err != nil {
 		log.Fatal(err)
@@ -31,10 +23,10 @@ func initDB() *DB{
 	return db
 }
 
-func (db *DB) getMessage() {
+func (db *DB) getMessages() {
 	err := db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("message"))
-		
+
 		return err
 	})
 }
@@ -49,15 +41,14 @@ func (db *DB) getUser() {
 
 func (db *DB) storeMessage() {
 	err := db.Update(func(txn *badger.Txn) error {
-  		// Your code here…
-  		return err
+		// Your code here…
+		return err
 	})
 }
 
 func (db *DB) storeUser() {
 	err := db.Update(func(txn *badger.Txn) error {
-  		// Your code here…
-  		return err
+		// Your code here…
+		return err
 	})
 }
-
